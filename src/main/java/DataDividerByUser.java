@@ -17,9 +17,11 @@ public class DataDividerByUser {
 		// map method
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-
 			//input user,movie,rating
-			//divide data by user
+			//outputKey = user
+			//outputValue = movie:rating
+			String[] user_rating_movie = value.toString().trim().split(",");
+			context.write(new IntWritable(Integer.parseInt(user_rating_movie[0])), new Text(user_rating_movie[1] + ":" + user_rating_movie[2]));
 		}
 	}
 
@@ -28,8 +30,14 @@ public class DataDividerByUser {
 		@Override
 		public void reduce(IntWritable key, Iterable<Text> values, Context context)
 				throws IOException, InterruptedException {
-
-			//merge data for one user
+			//inputKey = userId
+			//inputValue = <movieId:rating...>
+			StringBuilder outputValue = new StringBuilder();
+			while(values.iterator().hasNext()) {
+				outputValue.append(values.iterator().next());
+				outputValue.append(",");
+			}
+			context.write(key, new Text(outputValue.deleteCharAt(outputValue.length() - 1).toString()));
 		}
 	}
 

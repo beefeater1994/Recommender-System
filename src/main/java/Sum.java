@@ -12,7 +12,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import java.io.IOException;
 
 /**
- * Created by Michelle on 11/12/16.
+ * Created by Eric on 5/12/18.
  */
 public class Sum {
 
@@ -22,7 +22,9 @@ public class Sum {
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 
-            //pass data to reducer
+            //value=userId;movieId\tsubrating
+            String[] key_subRating = value.toString().trim().split("\t");
+            context.write(new Text(key_subRating[0]), new DoubleWritable(Double.parseDouble(key_subRating[1])));
         }
     }
 
@@ -31,9 +33,11 @@ public class Sum {
         @Override
         public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
                 throws IOException, InterruptedException {
-
-            //user:movie relation
-           //calculate the sum
+            double sum = 0;
+            for (DoubleWritable value : values) {
+                sum += value.get();
+            }
+            context.write(key, new DoubleWritable(sum));
         }
     }
 

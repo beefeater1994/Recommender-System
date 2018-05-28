@@ -21,9 +21,11 @@ public class Multiplication {
 		// map method
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-			//input: movieB \t movieA=relation
-
-			//pass data to reducer
+			//value = movieB\tmovieA=relativeRelation
+			//outputKey = movieB
+			//outputValue = movieA=relativeRelation
+			String[] movie_relation = value.toString().trim().split("\t");
+			context.write(new Text(movie_relation[0]), new Text(movie_relation[1]));
 		}
 	}
 
@@ -32,9 +34,9 @@ public class Multiplication {
 		// map method
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-
-			//input: user,movie,rating
-			//pass data to reducer
+			//value = user,movie,rating
+			String[] user_movie_rating = value.toString().trim().split(",");
+			context.write(new Text(user_movie_rating[1]), new Text(user_movie_rating[0] + ":" + user_movie_rating[2]));
 		}
 	}
 
@@ -44,8 +46,37 @@ public class Multiplication {
 		public void reduce(Text key, Iterable<Text> values, Context context)
 				throws IOException, InterruptedException {
 
-			//key = movieB value = <movieA=relation, movieC=relation... userA:rating, userB:rating...>
-			//collect the data for each movie, then do the multiplication
+			//inputKey = movieB
+			//inputValue = <movieA1=relation, movieA2=relation... user1:rating1, user2;rating2...>
+			//Multiplication
+			//movie_relation_map<movieA_id, relativeRelation> movieA -> A1,A2,A3
+			//user_rating_map<userId, rating> user -> 1,2
+			//outputKey = movieA:userId
+			//outputValue = relativeRelation*rating
+
+			Map<String, Double> movie_relation_map = new HashMap<String, Double>();
+			Map<String, Double> user_rating_map = new HashMap<String, Double>();
+			for (Text value : values) {
+				if (value.toString().contains("=")) {
+					String[] movie_relation = value.toString().trim().split("=");
+					movie_relation_map.put(movie_relation[0], Double.parseDouble(movie_relation[1]));
+				} else {
+					String[] user_rating = value.toString().trim().split(":");
+					user_rating_map.put(user_rating[0], Double.parseDouble(user_rating[1]));
+				}
+			}
+
+			for (Map.Entry<String, Double> entry : movie_relation_map.entrySet()) {
+				String movieA = entry.getKey();
+				double relation = entry.getValue();
+				for (Map.Entry<String, Double> element : user_rating_map.entrySet()) {
+					String userId = element.getKey();
+					double rating = element.getValue();
+					String outputKey = userId + ":" + movieA;
+					double outputValue = relation * rating;
+					context.write(new Text(outputKey), new DoubleWritable(outputValue));
+				}
+			}
 		}
 	}
 
